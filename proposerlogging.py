@@ -10,7 +10,7 @@ import subprocess
 import requests
 import time
 from requests_futures.sessions import FuturesSession
-
+import sys
 
 # check the current height
 # if height changes
@@ -18,6 +18,8 @@ from requests_futures.sessions import FuturesSession
     # keep track on the log, log down absent validators, calculate the timeout_commit
 
 fo = open("Proposerlog.log", "a")
+orig_stdout = sys.stdout
+sys.stdout = fo
 
 j = journal.Reader()
 j.this_boot()
@@ -49,7 +51,7 @@ try:
 
             msg = entry["MESSAGE"]
             if ("Timed out" in msg and "step=RoundStepNewHeight" in msg):
-                fo.write(msg + '\n')
+                print(msg)
 #            print(msg)
 
             if (getProposer):
@@ -66,7 +68,7 @@ try:
                     jsonstr = unijson.encode("ascii", "replace")
                     myjson = json.loads(jsonstr)
                     proposerAddr = myjson['result']['round_state']['validators']['proposer']['address']
-                    fo.write('Height: ' + h + ', Proposer: ' + proposerAddr+ '\n')
+                    print('Height: ' + h + ', Proposer: ' + proposerAddr)
 
                     currHeight = h
 
@@ -75,7 +77,7 @@ try:
                 timeout = getCommitTimeout.group(1)
                 h = getCommitTimeout.group(2)
 #                if (h == currHeight):
-                fo.write("Height: " + h + ", Timeout reached: " + timeout + '\n')
+                print("Height: " + h + ", Timeout reached: " + timeout)
 #                else:
 #                    print("Time not out")
 
@@ -83,11 +85,12 @@ try:
                 valaddr = matchAbsent.group(3)
                 h = matchAbsent.group(4)
 #                if (h == currHeight):
-                fo.write("Height: " + h + ", Absent validator: " + valaddr + '\n')
+                print("Height: " + h + ", Absent validator: " + valaddr)
 #                else:
 #                    print("It should not appear this line...")
 
 except KeyboardInterrupt:
+    sys.stdout = orig_stdout
     fo.close()
     print("Thanks for using")
 
