@@ -36,16 +36,20 @@ try:
     while True:
         for entry in j:
             # get new height when encounter this line
-            checkHeight = re.search(r'/.*I\[[0-9]{2}-[0-9]{2}\|([0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3})] Received proposal\s*module=consensus proposal="Proposal{([0-9]{1,})\/0.*/', str(entry))
+            getProposer = re.search(r'/.*I\[[0-9]{2}-[0-9]{2}\|([0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3})] Received proposal\s*module=consensus proposal="Proposal{([0-9]{1,})\/0.*/', str(entry))
 
             # get the proposer of that round
-            getProposer = re.search(r'/.*I\[[0-9]{2}-[0-9]{2}\|([0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3})] enterPropose: (Not our turn to propose)?(Our turn to propose)?\ *module=consensus height=([0-9]{1,}) round=[0-9]{1,} proposer=([0-9A-F]{40}).*/', str(entry))
+            temp = re.search(r'/.*I\[[0-9]{2}-[0-9]{2}\|([0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3})] enterPropose: (Not our turn to propose)?(Our turn to propose)?\ *module=consensus height=([0-9]{1,}) round=[0-9]{1,} proposer=([0-9A-F]{40}).*/', str(entry))
 
-            # check
+            # check Absent validator
+            matchAbsent = re.search(r'/.*I\[([0-9]{2}-[0-9]{2})\|([0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3})\] Absent validator ([0-9A-F]{40}) at height ([0-9]{1,}), ([0-9]{1,}) signed, threshold ([0-9]{1,}).*/' , str(entry))
+
+            # check timeout_commit of proposer of that round
+            getCommitTimeout = re.search(r'/.*I\[[0-9]{2}-[0-9]{2}\|[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}\] Timed out\s*module=consensus dur=([0-9]{1,}.[0-9]{1,})s height=([0-9]{1,}) round=[0-9]{1,} step=RoundStepNewHeight.*/', str(entry))
 
             msg = entry["MESSAGE"]
 
-            if (checkHeight):
+            if (getProposer):
                 startTime = checkHeight.group(1)
                 height = checkHeight.group(2)
                 if (height != preHeight):
@@ -63,9 +67,23 @@ try:
 
                     preheight = height
 
-             elif (getProposer):
-                 h = getProposer.group(4)
-                 proposer = getProposer.group(5)
+            elif (matchAbsent):
+                valaddr = matchAbsent.group(3)
+                h = matchAbsent.group(4)
+                if (h == height):
+                    print("Absent validator: " + valaddr)
+                else:
+                    print("It should not appear this line...")
+
+            elif (getCommitTimeout):
+                timeout = getCommitTimeout.group(1)
+                h = getCommitTimeout.group(2)
+                if (height == h):
+                    print("Timeout reached: " + timeout)
+                else:
+                    print("Time not out")
+
+
 except KeyboardInterrupt:
     print("Thanks for using")
 
